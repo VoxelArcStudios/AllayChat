@@ -118,12 +118,38 @@ public class LocalChatManager implements ChatManager {
             format = groupFormatMap.get("default");
         }
 
-        String messageContent = PlainTextComponentSerializer.plainText().serialize(message);
-        Component messageComponent;
-        if (player.hasPermission("allaychat.chatcolor")) {
-            messageComponent = LegacyComponentSerializer.legacyAmpersand().deserialize(messageContent);
-        } else {
-            messageComponent = Component.text(messageContent);
+        Component component = ChatUtils.format(
+                format.format(),
+                ChatUtils.papiTag(player),
+                Placeholder.component("message", message)
+        );
+
+        if (format.hover() != null) {
+            List<Component> hoverComponents = new ArrayList<>();
+            for (String line : format.hover().message())
+                hoverComponents.add(ChatUtils.format(line, ChatUtils.papiTag(player)));
+
+            component = component.hoverEvent(
+                    Component.join(JoinConfiguration.newlines(), hoverComponents)
+            );
+        }
+
+        if (format.click() != null) {
+            String command = format.click().command();
+            command = PlaceholderAPI.setPlaceholders(player, command);
+            component = component.clickEvent(ClickEvent.clickEvent(format.click().action(), command));
+        }
+
+        return component;
+    }
+
+    private Component handleChatMessage(Component messageComponent, String messageContent, Player player) {
+        if (plugin.getReplacementConfig().getBoolean("color.enabled", true)) {
+            if (player.hasPermission("allaychat.chatcolor")) {
+                messageComponent = LegacyComponentSerializer.legacyAmpersand().deserialize(messageContent);
+            } else {
+                messageComponent = Component.text(messageContent);
+            }
         }
 
         if (plugin.getReplacementConfig().getBoolean("mention.enabled"))
@@ -147,29 +173,7 @@ public class LocalChatManager implements ChatManager {
         if (plugin.getReplacementConfig().getBoolean("shulker.enabled"))
             messageComponent = handleShulker(player, messageContent, messageComponent);
 
-        Component component = ChatUtils.format(
-                format.format(),
-                ChatUtils.papiTag(player),
-                Placeholder.component("message", messageComponent)
-        );
-
-        if (format.hover() != null) {
-            List<Component> hoverComponents = new ArrayList<>();
-            for (String line : format.hover().message())
-                hoverComponents.add(ChatUtils.format(line, ChatUtils.papiTag(player)));
-
-            component = component.hoverEvent(
-                    Component.join(JoinConfiguration.newlines(), hoverComponents)
-            );
-        }
-
-        if (format.click() != null) {
-            String command = format.click().command();
-            command = PlaceholderAPI.setPlaceholders(player, command);
-            component = component.clickEvent(ClickEvent.clickEvent(format.click().action(), command));
-        }
-
-        return component;
+        return messageComponent;
     }
 
     @Override
@@ -196,7 +200,13 @@ public class LocalChatManager implements ChatManager {
     public void handleChatEvent(AsyncChatEvent event) {
         String message = PlainTextComponentSerializer.plainText().serialize(event.message());
         event.setCancelled(plugin.getChatManager().handleMessage(event.getPlayer(), message));
-        event.renderer(ChatRenderer.viewerUnaware(plugin.getChatManager().getChatRenderer()));
+
+        // Handle the message (and replacements) separately so we can add an option to disable chat formatting
+        event.message(handleChatMessage(event.message(), message, event.getPlayer()));
+
+        if (plugin.getFormatConfig().getBoolean("enabled", true))
+            event.renderer(ChatRenderer.viewerUnaware(plugin.getChatManager().getChatRenderer()));
+
         event.viewers().removeIf(viewer -> {
             if (!(viewer instanceof Player player)) return false;
             ChatUser user = plugin.getUserManager().getUser(player.getUniqueId());

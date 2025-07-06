@@ -38,6 +38,13 @@ mention:
     title: "<#34ebd8><bold>MENTION"
     subtitle: "<#34ebd8><player> <white>mentioned you in chat!"
 
+# Should we respect existing colors in messages or not?
+# If you don't want AllayChat to change how your chat color stuff works
+# Set this to false.
+# If set to true, only players with allaychat.chatcolor permission will be able to use colors.
+color:
+  enabled: true
+
 placeholder:
   enabled: true
   # Does not support PlaceholderAPI

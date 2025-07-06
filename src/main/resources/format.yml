@@ -1,5 +1,7 @@
 # PlaceholderAPI is also supported! <papi:YOUR_PLACEHOLDERAPI_PLACEHOLDER>
 
+enabled: true
+
 format:
   # If no group was found for the player, this format will be used.
   default:
