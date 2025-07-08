@@ -28,6 +28,14 @@ public class ChatUtils {
 
     public final static MiniMessage MINI_MESSAGE = MiniMessage.builder()
             .tags(TagResolver.standard())
+            .tags(TagResolver.resolver("papi", (argumentQueue, context) -> {
+                final String papiPlaceholder = argumentQueue.popOr("papi tag requires an argument").value();
+                final Player player = context.target() instanceof Player ? (Player) context.target() : null;
+                final String parsedPlaceholder = PlaceholderAPI.setPlaceholders(player, '%' + papiPlaceholder + '%');
+                final Component componentPlaceholder = LegacyComponentSerializer.legacyAmpersand().deserialize(parsedPlaceholder);
+
+                return Tag.selfClosingInserting(componentPlaceholder);
+            }))
             .preProcessor(s -> s.replace("<prefix>", AllayChat.getPlugin(AllayChat.class).getMessagesConfig().getString("messages.prefix", "")))
             .postProcessor(component -> component.decoration(TextDecoration.ITALIC, false))
             .build();
